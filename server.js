@@ -16,16 +16,18 @@ if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR);
 // yt-dlp binary yolu
 const YTDLP_PATH = path.join(__dirname, "bin", process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
 
-app.use(express.json());
-
-// CORS
+// CORS - tum isteklerden once
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  if (req.method === "OPTIONS") return res.sendStatus(200);
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Accept");
+  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
   next();
 });
+
+app.use(express.json());
 
 app.use(express.static(path.join(__dirname, "public")));
 
