@@ -13,8 +13,10 @@ const TEMP_DIR = path.join(__dirname, "temp");
 if (!fs.existsSync(CLIPS_DIR)) fs.mkdirSync(CLIPS_DIR);
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR);
 
-// yt-dlp binary yolu
-const YTDLP_PATH = path.join(__dirname, "bin", process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
+// yt-dlp yolu: Windows'ta binary, Linux'ta (Render) pip ile yuklenmis
+const YTDLP_PATH = process.platform === "win32"
+  ? path.join(__dirname, "bin", "yt-dlp.exe")
+  : "yt-dlp";
 
 // CORS - tum isteklerden once
 app.use((req, res, next) => {
