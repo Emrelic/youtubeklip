@@ -4,7 +4,7 @@
   "description": "YouTube video klip kesici - Android uygulamasi",
   "main": "server.js",
   "scripts": {
-    "setup": "node setup.js",
+    "postinstall": "node setup.js",
     "start": "node server.js",
     "build": "node setup.js"
   },
