@@ -3,7 +3,7 @@ services:
     name: youtubeklip
     runtime: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm install && node setup.js
     startCommand: node server.js
     envVars:
       - key: NODE_ENV

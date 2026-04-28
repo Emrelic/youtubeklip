@@ -1,8 +1,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const { spawn } = require("child_process");
-const ytdl = require("@distube/ytdl-core");
+const { spawn, execFile } = require("child_process");
 const ffmpegPath = require("ffmpeg-static");
 const crypto = require("crypto");
 
@@ -14,9 +13,12 @@ const TEMP_DIR = path.join(__dirname, "temp");
 if (!fs.existsSync(CLIPS_DIR)) fs.mkdirSync(CLIPS_DIR);
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR);
 
+// yt-dlp binary yolu
+const YTDLP_PATH = path.join(__dirname, "bin", process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
+
 app.use(express.json());
 
-// CORS - Android uygulamasindan erisim izni
+// CORS
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Headers", "Content-Type");
@@ -29,28 +31,50 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // ==================== YARDIMCI FONKSIYONLAR ====================
 
-// Video bilgilerini indir
+// yt-dlp komutu calistir
+function ytdlp(args) {
+  return new Promise((resolve, reject) => {
+    execFile(YTDLP_PATH, args, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (err) return reject(new Error(stderr || err.message));
+      resolve(stdout);
+    });
+  });
+}
+
+// YouTube URL dogrulama
+function isValidYoutubeUrl(url) {
+  return /^https?:\/\/(www\.)?(youtube\.com\/(watch|shorts)|youtu\.be\/)/.test(url);
+}
+
+// Video bilgisi al (yt-dlp --dump-json)
+async function getVideoInfo(url) {
+  const output = await ytdlp(["--dump-json", "--no-download", url]);
+  const info = JSON.parse(output);
+  return {
+    title: info.title,
+    duration: info.duration,
+    thumbnail: info.thumbnail,
+  };
+}
+
+// Video indir (yt-dlp ile)
 function downloadVideo(url) {
   return new Promise(async (resolve, reject) => {
     const id = crypto.randomBytes(8).toString("hex");
     const tempPath = path.join(TEMP_DIR, `${id}.mp4`);
 
     try {
-      const info = await ytdl.getInfo(url);
-      const format = ytdl.chooseFormat(info.formats, {
-        quality: "highest",
-        filter: "audioandvideo",
-      });
+      const infoOutput = await ytdlp(["--dump-json", "--no-download", url]);
+      const info = JSON.parse(infoOutput);
 
-      const stream = ytdl(url, { format });
-      const ws = fs.createWriteStream(tempPath);
+      await ytdlp([
+        "-f", "best[ext=mp4]/best",
+        "--no-playlist",
+        "-o", tempPath,
+        url,
+      ]);
 
-      stream.pipe(ws);
-      stream.on("error", reject);
-      ws.on("finish", () =>
-        resolve({ tempPath, title: info.videoDetails.title })
-      );
-      ws.on("error", reject);
+      resolve({ tempPath, title: info.title });
     } catch (err) {
       reject(err);
     }
@@ -60,7 +84,7 @@ function downloadVideo(url) {
 // Tek segment kes
 function cutSegment(inputPath, start, duration, outputPath) {
   return new Promise((resolve, reject) => {
-    const args = [
+    const proc = spawn(ffmpegPath, [
       "-i", inputPath,
       "-ss", String(start),
       "-t", String(duration),
@@ -69,9 +93,8 @@ function cutSegment(inputPath, start, duration, outputPath) {
       "-movflags", "+faststart",
       "-y",
       outputPath,
-    ];
+    ]);
 
-    const proc = spawn(ffmpegPath, args);
     proc.on("close", (code) => {
       if (code === 0) resolve();
       else reject(new Error(`FFmpeg hata kodu: ${code}`));
@@ -123,28 +146,22 @@ function cleanup(...paths) {
 // 1) Video bilgisi getir
 app.post("/api/info", async (req, res) => {
   const { url } = req.body;
-  if (!url || !ytdl.validateURL(url)) {
+  if (!url || !isValidYoutubeUrl(url)) {
     return res.status(400).json({ error: "Gecersiz YouTube URL" });
   }
   try {
-    const info = await ytdl.getInfo(url);
-    const { title, lengthSeconds, thumbnails } = info.videoDetails;
-    res.json({
-      title,
-      duration: parseInt(lengthSeconds),
-      thumbnail: thumbnails[thumbnails.length - 1]?.url,
-    });
+    const info = await getVideoInfo(url);
+    res.json(info);
   } catch (err) {
     res.status(500).json({ error: "Video bilgisi alinamadi: " + err.message });
   }
 });
 
 // 2) Tek veya coklu klip kes (ve birlestir)
-//    body: { url, segments: [{ start, end }, ...] }
 app.post("/api/clip", async (req, res) => {
   const { url, segments } = req.body;
 
-  if (!url || !ytdl.validateURL(url)) {
+  if (!url || !isValidYoutubeUrl(url)) {
     return res.status(400).json({ error: "Gecersiz YouTube URL" });
   }
   if (!segments || !Array.isArray(segments) || segments.length === 0) {
@@ -156,24 +173,17 @@ app.post("/api/clip", async (req, res) => {
       return res.status(400).json({ error: "Gecersiz zaman araligi" });
     }
     if (seg.end - seg.start > 600) {
-      return res
-        .status(400)
-        .json({ error: "Her segment maksimum 10 dakika olabilir" });
+      return res.status(400).json({ error: "Her segment maksimum 10 dakika olabilir" });
     }
   }
 
   const id = crypto.randomBytes(8).toString("hex");
 
   try {
-    // Videoyu indir
     const { tempPath, title } = await downloadVideo(url);
-    const safeTitle = title
-      .replace(/[^a-zA-Z0-9_\-\s]/g, "")
-      .trim()
-      .substring(0, 50);
+    const safeTitle = title.replace(/[^a-zA-Z0-9_\-\s]/g, "").trim().substring(0, 50);
 
     if (segments.length === 1) {
-      // --- TEK SEGMENT ---
       const seg = segments[0];
       const filename = `${safeTitle}_${seg.start}-${seg.end}.mp4`;
       const outputPath = path.join(CLIPS_DIR, filename);
@@ -188,9 +198,8 @@ app.post("/api/clip", async (req, res) => {
       });
     }
 
-    // --- COKLU SEGMENT: kes + birlestir ---
+    // Coklu segment: kes + birlestir
     const segPaths = [];
-
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       const segPath = path.join(TEMP_DIR, `${id}_seg${i}.mp4`);
@@ -217,11 +226,7 @@ app.post("/api/clip", async (req, res) => {
 // 3) Dosya indir
 app.get("/api/download/:filename", (req, res) => {
   const filename = req.params.filename;
-  if (
-    filename.includes("..") ||
-    filename.includes("/") ||
-    filename.includes("\\")
-  ) {
+  if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
     return res.status(400).json({ error: "Gecersiz dosya adi" });
   }
   const filePath = path.join(CLIPS_DIR, filename);
@@ -239,9 +244,7 @@ setInterval(() => {
       fs.readdirSync(dir).forEach((file) => {
         const fp = path.join(dir, file);
         const stat = fs.statSync(fp);
-        if (now - stat.mtimeMs > 3600000) {
-          fs.unlinkSync(fp);
-        }
+        if (now - stat.mtimeMs > 3600000) fs.unlinkSync(fp);
       });
     } catch (_) {}
   });
