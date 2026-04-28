@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>YouTube Klip</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 12px 16px 80px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 14px 0 18px;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #ff3b3b;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      font-size: 12px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    /* Sunucu ayari */
+    .server-section {
+      background: #141414;
+      border: 1px solid #252525;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+    .server-section label {
+      font-size: 11px;
+      color: #777;
+      display: block;
+      margin-bottom: 6px;
+    }
+    .server-row {
+      display: flex;
+      gap: 8px;
+    }
+    .server-row input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    .server-row input:focus { border-color: #ff3b3b; }
+    .server-row button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: #ff3b3b;
+      color: #fff;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .server-status {
+      font-size: 11px;
+      margin-top: 6px;
+      color: #555;
+    }
+    .server-status.ok { color: #4caf50; }
+    .server-status.err { color: #ff3b3b; }
+
+    /* URL girisi */
+    .url-section {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .url-section input {
+      flex: 1;
+      padding: 13px 14px;
+      border: 2px solid #222;
+      border-radius: 12px;
+      background: #141414;
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+    }
+    .url-section input:focus { border-color: #ff3b3b; }
+    .url-section button {
+      padding: 13px 20px;
+      border: none;
+      border-radius: 12px;
+      background: #ff3b3b;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .url-section button:disabled { opacity: 0.4; }
+
+    /* Player */
+    .player-card {
+      display: none;
+      background: #111;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 14px;
+      border: 1px solid #222;
+    }
+    .player-ratio {
+      position: relative;
+      padding-top: 56.25%;
+    }
+    .player-ratio iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: 0;
+    }
+    .player-info {
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .player-title {
+      font-size: 13px;
+      color: #aaa;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .player-duration {
+      font-size: 12px;
+      color: #666;
+      margin-left: 10px;
+      white-space: nowrap;
+    }
+
+    /* Cari zaman */
+    .now-time {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: #fff;
+      padding: 10px 0 6px;
+      letter-spacing: 1px;
+    }
+
+    /* Segment listesi */
+    .segments-section {
+      display: none;
+    }
+    .seg-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .seg-header h3 {
+      font-size: 14px;
+      color: #ccc;
+    }
+    .seg-add-btn {
+      padding: 6px 14px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #4caf50;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .seg-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .seg-card {
+      background: #141414;
+      border: 1px solid #252525;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .seg-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .seg-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: #ff3b3b;
+    }
+    .seg-remove {
+      width: 28px;
+      height: 28px;
+      border: none;
+      border-radius: 50%;
+      background: #2a1515;
+      color: #ff3b3b;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .seg-times {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .seg-time-group {
+      flex: 1;
+    }
+    .seg-time-group label {
+      font-size: 10px;
+      color: #666;
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .seg-time-row {
+      display: flex;
+      gap: 4px;
+    }
+    .seg-time-row input {
+      width: 100%;
+      padding: 9px 8px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+      outline: none;
+    }
+    .seg-time-row input:focus { border-color: #ff3b3b; }
+    .seg-mark-btn {
+      padding: 9px 10px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #222;
+      color: #ff3b3b;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .seg-mark-btn:active { background: #2a1515; }
+
+    .seg-arrow {
+      color: #444;
+      font-size: 18px;
+      padding-top: 16px;
+    }
+
+    .seg-dur {
+      text-align: right;
+      font-size: 11px;
+      color: #666;
+      margin-top: 6px;
+    }
+
+    /* Ana buton */
+    .action-bar {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 16px;
+      background: linear-gradient(transparent, #0a0a0a 30%);
+      z-index: 100;
+    }
+    .action-bar button {
+      display: block;
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      background: #ff3b3b;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .action-bar button:active { transform: scale(0.98); }
+    .action-bar button:disabled { opacity: 0.4; }
+
+    /* Status */
+    .status-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .status-overlay.show {
+      display: flex;
+    }
+    .status-box {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 16px;
+      padding: 30px 24px;
+      text-align: center;
+      max-width: 340px;
+      width: 90%;
+    }
+    .status-box .spinner {
+      display: inline-block;
+      width: 36px; height: 36px;
+      border: 4px solid #333;
+      border-top-color: #ff3b3b;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .status-box .msg {
+      font-size: 15px;
+      color: #ccc;
+      margin-bottom: 6px;
+    }
+    .status-box .sub {
+      font-size: 12px;
+      color: #666;
+    }
+    .status-box .error-msg {
+      color: #ff3b3b;
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+
+    .btn-green {
+      display: inline-block;
+      padding: 14px 32px;
+      background: #4caf50;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      margin-top: 14px;
+    }
+    .btn-close {
+      display: inline-block;
+      padding: 10px 24px;
+      background: #333;
+      color: #ccc;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>YouTube Klip</h1>
+      <p>Video kes, birlestir, indir</p>
+    </div>
+
+    <!-- Sunucu ayari -->
+    <div class="server-section" id="serverSection">
+      <label>Sunucu Adresi</label>
+      <div class="server-row">
+        <input type="text" id="serverUrl" placeholder="https://yourserver.com veya IP:port" />
+        <button onclick="connectServer()">Baglan</button>
+      </div>
+      <div class="server-status" id="serverStatus"></div>
+    </div>
+
+    <!-- URL girisi -->
+    <div class="url-section">
+      <input type="text" id="urlInput" placeholder="YouTube linkini yapistir..." />
+      <button id="loadBtn" onclick="loadVideo()">Yukle</button>
+    </div>
+
+    <!-- Player -->
+    <div class="player-card" id="playerCard">
+      <div class="player-ratio">
+        <div id="ytPlayer"></div>
+      </div>
+      <div class="player-info">
+        <span class="player-title" id="videoTitle"></span>
+        <span class="player-duration" id="videoDuration"></span>
+      </div>
+    </div>
+
+    <!-- Mevcut zaman -->
+    <div class="now-time" id="nowTime" style="display:none">0:00:00</div>
+
+    <!-- Segmentler -->
+    <div class="segments-section" id="segSection">
+      <div class="seg-header">
+        <h3>Klip Parcalari</h3>
+        <button class="seg-add-btn" onclick="addSegment()">+ Parca Ekle</button>
+      </div>
+      <div class="seg-list" id="segList"></div>
+    </div>
+  </div>
+
+  <!-- Alt buton -->
+  <div class="action-bar" id="actionBar">
+    <button id="clipBtn" onclick="doClip()">Klibi Kes ve Indir</button>
+  </div>
+
+  <!-- Durum -->
+  <div class="status-overlay" id="statusOverlay">
+    <div class="status-box" id="statusBox"></div>
+  </div>
+
+  <script>
+    // ==================== DEGISKENLER ====================
+    let API_BASE = "";
+    let player = null;
+    let videoDuration = 0;
+    let currentUrl = "";
+    let timeInterval = null;
+    let segments = [];
+
+    // ==================== SUNUCU BAGLANTISI ====================
+    (function initServer() {
+      const saved = localStorage.getItem("ytklip_server");
+      if (saved) {
+        document.getElementById("serverUrl").value = saved;
+        API_BASE = saved.replace(/\/+$/, "");
+        setServerStatus("Bagli: " + API_BASE, "ok");
+      }
+    })();
+
+    function connectServer() {
+      let url = document.getElementById("serverUrl").value.trim();
+      if (!url) return;
+
+      // Eger sadece IP:port girdiyse http ekle
+      if (!url.startsWith("http")) url = "http://" + url;
+      url = url.replace(/\/+$/, "");
+
+      API_BASE = url;
+      localStorage.setItem("ytklip_server", url);
+      setServerStatus("Bagli: " + url, "ok");
+    }
+
+    function setServerStatus(text, type) {
+      const el = document.getElementById("serverStatus");
+      el.textContent = text;
+      el.className = "server-status " + (type || "");
+    }
+
+    // ==================== YOUTUBE PLAYER ====================
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+
+    window.onYouTubeIframeAPIReady = function () {};
+
+    function extractVideoId(url) {
+      const m = url.match(
+        /(?:youtu\.be\/|v=|\/embed\/|\/v\/|\/shorts\/)([a-zA-Z0-9_-]{11})/
+      );
+      return m ? m[1] : null;
+    }
+
+    function fmt(sec) {
+      sec = Math.max(0, Math.floor(sec));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return h + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+    }
+
+    function fmtShort(sec) {
+      sec = Math.max(0, Math.floor(sec));
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      if (m >= 60) return fmt(sec);
+      return m + ":" + String(s).padStart(2, "0");
+    }
+
+    function parseSec(str) {
+      const parts = str.split(":").map(Number);
+      if (parts.some(isNaN)) return NaN;
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+      return parts[0] || 0;
+    }
+
+    function getCurrentTime() {
+      if (player && typeof player.getCurrentTime === "function") {
+        return player.getCurrentTime();
+      }
+      return 0;
+    }
+
+    function startTimeTracking() {
+      if (timeInterval) clearInterval(timeInterval);
+      timeInterval = setInterval(() => {
+        document.getElementById("nowTime").textContent = fmt(getCurrentTime());
+      }, 200);
+    }
+
+    // ==================== VIDEO YUKLE ====================
+    async function loadVideo() {
+      const url = document.getElementById("urlInput").value.trim();
+      if (!url) return;
+
+      const videoId = extractVideoId(url);
+      if (!videoId) return showError("Gecersiz YouTube linki");
+
+      const btn = document.getElementById("loadBtn");
+      btn.disabled = true;
+      btn.textContent = "...";
+      currentUrl = url;
+
+      try {
+        // Bilgi al
+        const res = await fetch(API_BASE + "/api/info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        videoDuration = data.duration;
+
+        document.getElementById("videoTitle").textContent = data.title;
+        document.getElementById("videoDuration").textContent = fmtShort(data.duration);
+        document.getElementById("playerCard").style.display = "block";
+        document.getElementById("nowTime").style.display = "block";
+        document.getElementById("segSection").style.display = "block";
+        document.getElementById("actionBar").style.display = "block";
+
+        // Player
+        if (player) {
+          player.loadVideoById(videoId);
+        } else {
+          player = new YT.Player("ytPlayer", {
+            videoId: videoId,
+            playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+            events: {
+              onReady: () => startTimeTracking(),
+              onStateChange: (e) => {
+                if (e.data === YT.PlayerState.PLAYING) startTimeTracking();
+              },
+            },
+          });
+        }
+        startTimeTracking();
+
+        // Ilk segmenti olustur (yoksa)
+        if (segments.length === 0) {
+          addSegment();
+        }
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Yukle";
+      }
+    }
+
+    // ==================== SEGMENT YONETIMI ====================
+    function addSegment() {
+      const id = Date.now();
+      segments.push({ id, start: 0, end: videoDuration || 0 });
+      renderSegments();
+    }
+
+    function removeSegment(id) {
+      if (segments.length <= 1) return;
+      segments = segments.filter((s) => s.id !== id);
+      renderSegments();
+    }
+
+    function markTime(id, field) {
+      const t = Math.floor(getCurrentTime());
+      const seg = segments.find((s) => s.id === id);
+      if (!seg) return;
+      seg[field] = t;
+      renderSegments();
+    }
+
+    function onTimeInput(id, field, value) {
+      const seg = segments.find((s) => s.id === id);
+      if (!seg) return;
+      const sec = parseSec(value);
+      if (!isNaN(sec)) seg[field] = sec;
+    }
+
+    function renderSegments() {
+      const container = document.getElementById("segList");
+      container.innerHTML = "";
+
+      segments.forEach((seg, i) => {
+        const dur = Math.max(0, seg.end - seg.start);
+        const card = document.createElement("div");
+        card.className = "seg-card";
+        card.innerHTML = `
+          <div class="seg-card-head">
+            <span class="seg-num">Parca ${i + 1}</span>
+            ${segments.length > 1
+              ? `<button class="seg-remove" onclick="removeSegment(${seg.id})">x</button>`
+              : ""}
+          </div>
+          <div class="seg-times">
+            <div class="seg-time-group">
+              <label>Baslangic</label>
+              <div class="seg-time-row">
+                <input type="text" value="${fmt(seg.start)}"
+                  onchange="onTimeInput(${seg.id},'start',this.value)" />
+                <button class="seg-mark-btn" onclick="markTime(${seg.id},'start')">Simdi</button>
+              </div>
+            </div>
+            <span class="seg-arrow">&#8594;</span>
+            <div class="seg-time-group">
+              <label>Bitis</label>
+              <div class="seg-time-row">
+                <input type="text" value="${fmt(seg.end)}"
+                  onchange="onTimeInput(${seg.id},'end',this.value)" />
+                <button class="seg-mark-btn" onclick="markTime(${seg.id},'end')">Simdi</button>
+              </div>
+            </div>
+          </div>
+          <div class="seg-dur">Sure: ${fmtShort(dur)}</div>
+        `;
+        container.appendChild(card);
+      });
+
+      // Buton yazisini guncelle
+      const btn = document.getElementById("clipBtn");
+      if (segments.length > 1) {
+        btn.textContent = segments.length + " Parcayi Kes & Birlestir";
+      } else {
+        btn.textContent = "Klibi Kes ve Indir";
+      }
+    }
+
+    // ==================== KLIP KES ====================
+    async function doClip() {
+      if (!currentUrl) return;
+
+      // Segmentleri dogrula
+      const segs = segments.map((s) => ({
+        start: s.start,
+        end: s.end,
+      }));
+
+      for (const s of segs) {
+        if (s.start >= s.end) return showError("Baslangic, bitisten kucuk olmali");
+        if (s.end - s.start > 600) return showError("Her parca max 10 dakika");
+      }
+
+      const btn = document.getElementById("clipBtn");
+      btn.disabled = true;
+
+      showLoading(
+        segments.length > 1
+          ? "Parcalar kesiliyor ve birlestiriliyor..."
+          : "Klip hazirlaniyor..."
+      );
+
+      try {
+        const res = await fetch(API_BASE + "/api/clip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: currentUrl, segments: segs }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        showSuccess(API_BASE + data.downloadUrl);
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ==================== STATUS EKRANI ====================
+    function showLoading(msg) {
+      const box = document.getElementById("statusBox");
+      box.innerHTML = `
+        <div class="spinner"></div>
+        <div class="msg">${msg}</div>
+        <div class="sub">Bu islem biraz zaman alabilir...</div>
+      `;
+      document.getElementById("statusOverlay").classList.add("show");
+    }
+
+    function showSuccess(downloadUrl) {
+      const box = document.getElementById("statusBox");
+      box.innerHTML = `
+        <div class="msg" style="color:#4caf50;font-weight:700;font-size:18px;">Klip Hazir!</div>
+        <a class="btn-green" href="${downloadUrl}" download>Videoyu Indir</a>
+        <br>
+        <button class="btn-close" onclick="closeStatus()">Kapat</button>
+      `;
+      document.getElementById("statusOverlay").classList.add("show");
+    }
+
+    function showError(msg) {
+      const box = document.getElementById("statusBox");
+      box.innerHTML = `
+        <div class="error-msg">${msg}</div>
+        <button class="btn-close" onclick="closeStatus()">Kapat</button>
+      `;
+      document.getElementById("statusOverlay").classList.add("show");
+    }
+
+    function closeStatus() {
+      document.getElementById("statusOverlay").classList.remove("show");
+    }
+  </script>
+</body>
+</html>
