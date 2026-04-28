@@ -398,12 +398,13 @@
 
     <!-- Sunucu ayari -->
     <div class="server-section" id="serverSection">
-      <label>Sunucu Adresi</label>
-      <div class="server-row">
-        <input type="text" id="serverUrl" placeholder="https://yourserver.com veya IP:port" />
-        <button onclick="connectServer()">Baglan</button>
+      <label>Sunucu</label>
+      <div class="server-btns" style="display:flex;gap:8px;margin-bottom:8px;">
+        <button class="srv-btn" id="srvLocal" onclick="pickServer('http://192.168.1.147:3000')" style="flex:1;padding:12px 8px;border:2px solid #333;border-radius:10px;background:#1a1a1a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Eczane (WiFi)</button>
+        <button class="srv-btn" id="srvTailscale" onclick="pickServer('http://100.108.173.121:3000')" style="flex:1;padding:12px 8px;border:2px solid #333;border-radius:10px;background:#1a1a1a;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Disaridan (VPN)</button>
       </div>
       <div class="server-status" id="serverStatus"></div>
+      <input type="hidden" id="serverUrl" />
     </div>
 
     <!-- URL girisi -->
@@ -456,30 +457,84 @@
     let segments = [];
 
     // ==================== SUNUCU BAGLANTISI ====================
-    const DEFAULT_SERVER = "https://youtubeklip.onrender.com";
 
-    (function initServer() {
+    const SERVERS = [
+      "http://192.168.1.147:3000",  // WiFi (ev)
+      "http://100.108.173.121:3000", // Tailscale (disaridan)
+    ];
+
+    (async function initServer() {
       const saved = localStorage.getItem("ytklip_server");
       if (saved) {
         document.getElementById("serverUrl").value = saved;
         API_BASE = saved.replace(/\/+$/, "");
         setServerStatus("Bagli: " + API_BASE, "ok");
-      } else {
-        // Varsayilan olarak Render sunucusuna baglan
-        API_BASE = DEFAULT_SERVER;
-        document.getElementById("serverUrl").value = DEFAULT_SERVER;
-        setServerStatus("Bagli: " + DEFAULT_SERVER, "ok");
+        highlightServerBtn(saved);
+        return;
       }
+      // Hangi adres erisilebilir ise ona baglan
+      setServerStatus("Sunucu araniyor...", "");
+      for (const srv of SERVERS) {
+        try {
+          const res = await fetch(srv + "/api/info", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: "test" }),
+            signal: AbortSignal.timeout(3000),
+          });
+          // 400 bile dönse sunucu calisiyor demektir
+          API_BASE = srv;
+          document.getElementById("serverUrl").value = srv;
+          localStorage.setItem("ytklip_server", srv);
+          setServerStatus("Bagli: " + srv, "ok");
+          highlightServerBtn(srv);
+          return;
+        } catch (_) {}
+      }
+      // Hicbiri bulunamadi, varsayilani goster
+      API_BASE = SERVERS[0];
+      document.getElementById("serverUrl").value = SERVERS[0];
+      setServerStatus("Sunucu bulunamadi - adresi kontrol et", "err");
     })();
+
+    function pickServer(url) {
+      API_BASE = url;
+      document.getElementById("serverUrl").value = url;
+      localStorage.setItem("ytklip_server", url);
+      highlightServerBtn(url);
+      setServerStatus("Baglaniyor...", "");
+      // Test et
+      fetch(url + "/api/info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "test" }),
+        signal: AbortSignal.timeout(4000),
+      }).then(() => {
+        setServerStatus("Bagli: " + url, "ok");
+      }).catch(() => {
+        setServerStatus("Sunucuya erisilemedi", "err");
+      });
+    }
+
+    function highlightServerBtn(url) {
+      document.getElementById("srvLocal").style.borderColor = "#333";
+      document.getElementById("srvLocal").style.background = "#1a1a1a";
+      document.getElementById("srvTailscale").style.borderColor = "#333";
+      document.getElementById("srvTailscale").style.background = "#1a1a1a";
+      if (url.includes("192.168")) {
+        document.getElementById("srvLocal").style.borderColor = "#ff3b3b";
+        document.getElementById("srvLocal").style.background = "#2a1515";
+      } else {
+        document.getElementById("srvTailscale").style.borderColor = "#ff3b3b";
+        document.getElementById("srvTailscale").style.background = "#2a1515";
+      }
+    }
 
     function connectServer() {
       let url = document.getElementById("serverUrl").value.trim();
       if (!url) return;
-
-      // Eger sadece IP:port girdiyse http ekle
       if (!url.startsWith("http")) url = "http://" + url;
       url = url.replace(/\/+$/, "");
-
       API_BASE = url;
       localStorage.setItem("ytklip_server", url);
       setServerStatus("Bagli: " + url, "ok");
