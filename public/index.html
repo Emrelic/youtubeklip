@@ -456,12 +456,19 @@
     let segments = [];
 
     // ==================== SUNUCU BAGLANTISI ====================
+    const DEFAULT_SERVER = "https://youtubeklip.onrender.com";
+
     (function initServer() {
       const saved = localStorage.getItem("ytklip_server");
       if (saved) {
         document.getElementById("serverUrl").value = saved;
         API_BASE = saved.replace(/\/+$/, "");
         setServerStatus("Bagli: " + API_BASE, "ok");
+      } else {
+        // Varsayilan olarak Render sunucusuna baglan
+        API_BASE = DEFAULT_SERVER;
+        document.getElementById("serverUrl").value = DEFAULT_SERVER;
+        setServerStatus("Bagli: " + DEFAULT_SERVER, "ok");
       }
     })();
 
