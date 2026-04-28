@@ -33,10 +33,19 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // ==================== YARDIMCI FONKSIYONLAR ====================
 
+// Node.js yolunu bul (yt-dlp JS runtime olarak kullanacak)
+const nodePath = process.execPath;
+
 // yt-dlp komutu calistir
 function ytdlp(args) {
   return new Promise((resolve, reject) => {
-    execFile(YTDLP_PATH, args, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+    const fullArgs = [
+      "--js-runtimes", "nodejs:" + nodePath,
+      "--no-check-certificates",
+      "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      ...args,
+    ];
+    execFile(YTDLP_PATH, fullArgs, { maxBuffer: 10 * 1024 * 1024, timeout: 120000 }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr || err.message));
       resolve(stdout);
     });
