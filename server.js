@@ -40,13 +40,20 @@ const nodePath = process.execPath;
 function ytdlp(args) {
   return new Promise((resolve, reject) => {
     const fullArgs = [
-      "--js-runtimes", "nodejs:" + nodePath,
+      "--js-runtimes", "node:" + nodePath,
       "--no-check-certificates",
       "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       ...args,
     ];
     execFile(YTDLP_PATH, fullArgs, { maxBuffer: 10 * 1024 * 1024, timeout: 120000 }, (err, stdout, stderr) => {
-      if (err) return reject(new Error(stderr || err.message));
+      if (err) {
+        // stderr'den sadece ERROR satirlarini al
+        const errorLines = (stderr || err.message)
+          .split("\n")
+          .filter(l => l.includes("ERROR"))
+          .join(" ");
+        return reject(new Error(errorLines || stderr || err.message));
+      }
       resolve(stdout);
     });
   });
