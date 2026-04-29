@@ -53,7 +53,7 @@ function ytdlp(args) {
 }
 
 function isValidYoutubeUrl(url) {
-  return /^https?:\/\/(www\.)?(youtube\.com\/(watch|shorts)|youtu\.be\/)/.test(url);
+  return /^https?:\/\/(www\.|m\.|music\.)?(youtube\.com\/(watch|shorts|embed|v\/)|youtu\.be\/)/.test(url);
 }
 
 async function getVideoInfo(url) {
