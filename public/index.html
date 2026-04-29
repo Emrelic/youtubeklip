@@ -387,6 +387,27 @@
       cursor: pointer;
       margin-top: 10px;
     }
+
+    /* Kayit kontrolleri */
+    .record-btn {
+      padding: 16px 24px;
+      border: 2px solid #333;
+      border-radius: 12px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .record-btn.recording {
+      border-color: #ff3b3b;
+      background: #2a1515;
+      color: #ff3b3b;
+    }
+    .record-btn:active {
+      transform: scale(0.95);
+    }
   </style>
 </head>
 <body>
@@ -427,6 +448,16 @@
     <!-- Mevcut zaman -->
     <div class="now-time" id="nowTime" style="display:none">0:00:00</div>
 
+    <!-- Kayit kontrolleri -->
+    <div class="record-controls" id="recordControls" style="display:none">
+      <div style="text-align:center;margin-bottom:16px;">
+        <button class="record-btn" id="recordBtn" onclick="toggleRecord()">
+          📹 Kayit Baslat
+        </button>
+      </div>
+      <div id="recordStatus" style="text-align:center;font-size:12px;color:#666;margin-bottom:12px;"></div>
+    </div>
+
     <!-- Segmentler -->
     <div class="segments-section" id="segSection">
       <div class="seg-header">
@@ -455,6 +486,8 @@
     let currentUrl = "";
     let timeInterval = null;
     let segments = [];
+    let isRecording = false;
+    let recordStartTime = 0;
 
     // ==================== SUNUCU BAGLANTISI ====================
 
@@ -551,7 +584,10 @@
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
 
-    window.onYouTubeIframeAPIReady = function () {};
+    let ytApiReady = false;
+    window.onYouTubeIframeAPIReady = function () {
+      ytApiReady = true;
+    };
 
     function extractVideoId(url) {
       const m = url.match(
@@ -584,6 +620,25 @@
       return parts[0] || 0;
     }
 
+    function createPlayer(videoId) {
+      if (typeof YT === 'undefined' || !YT.Player) {
+        // API henüz yüklenmemiş, tekrar dene
+        setTimeout(() => createPlayer(videoId), 500);
+        return;
+      }
+      
+      player = new YT.Player("ytPlayer", {
+        videoId: videoId,
+        playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+        events: {
+          onReady: () => startTimeTracking(),
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.PLAYING) startTimeTracking();
+          },
+        },
+      });
+    }
+
     function getCurrentTime() {
       if (player && typeof player.getCurrentTime === "function") {
         return player.getCurrentTime();
@@ -595,6 +650,7 @@
       if (timeInterval) clearInterval(timeInterval);
       timeInterval = setInterval(() => {
         document.getElementById("nowTime").textContent = fmt(getCurrentTime());
+        updateRecordStatus();
       }, 200);
     }
 
@@ -625,8 +681,10 @@
 
         document.getElementById("videoTitle").textContent = data.title;
         document.getElementById("videoDuration").textContent = fmtShort(data.duration);
+        
         document.getElementById("playerCard").style.display = "block";
         document.getElementById("nowTime").style.display = "block";
+        document.getElementById("recordControls").style.display = "block";
         document.getElementById("segSection").style.display = "block";
         document.getElementById("actionBar").style.display = "block";
 
@@ -634,23 +692,13 @@
         if (player) {
           player.loadVideoById(videoId);
         } else {
-          player = new YT.Player("ytPlayer", {
-            videoId: videoId,
-            playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
-            events: {
-              onReady: () => startTimeTracking(),
-              onStateChange: (e) => {
-                if (e.data === YT.PlayerState.PLAYING) startTimeTracking();
-              },
-            },
-          });
+          createPlayer(videoId);
         }
         startTimeTracking();
 
-        // Ilk segmenti olustur (yoksa)
-        if (segments.length === 0) {
-          addSegment();
-        }
+        // Segment listesini temizle ve render et
+        segments = [];
+        renderSegments();
       } catch (err) {
         showError(err.message);
       } finally {
@@ -809,6 +857,55 @@
 
     function closeStatus() {
       document.getElementById("statusOverlay").classList.remove("show");
+    }
+
+    // ==================== KAYIT FONKSİYONLARI ====================
+    
+    function toggleRecord() {
+      const currentTime = getCurrentTime();
+      const recordBtn = document.getElementById("recordBtn");
+      const recordStatus = document.getElementById("recordStatus");
+      
+      if (!isRecording) {
+        // Kayıt başlat
+        isRecording = true;
+        recordStartTime = currentTime;
+        recordBtn.textContent = "⏹️ Kayıt Bitir";
+        recordBtn.classList.add("recording");
+        recordStatus.textContent = `Kayıt başladı: ${fmt(recordStartTime)}`;
+        recordStatus.style.color = "#ff3b3b";
+      } else {
+        // Kayıt bitir
+        isRecording = false;
+        const endTime = currentTime;
+        recordBtn.textContent = "📹 Kayıt Başlat";
+        recordBtn.classList.remove("recording");
+        
+        // Yeni segment ekle
+        if (endTime > recordStartTime) {
+          const newSegment = {
+            id: Date.now(),
+            start: Math.floor(recordStartTime),
+            end: Math.floor(endTime)
+          };
+          segments.push(newSegment);
+          renderSegments();
+          recordStatus.textContent = `Parça eklendi: ${fmt(recordStartTime)} - ${fmt(endTime)}`;
+          recordStatus.style.color = "#4caf50";
+        } else {
+          recordStatus.textContent = "Geçersiz zaman aralığı";
+          recordStatus.style.color = "#ff3b3b";
+        }
+      }
+    }
+    
+    function updateRecordStatus() {
+      if (isRecording) {
+        const currentTime = getCurrentTime();
+        const duration = currentTime - recordStartTime;
+        document.getElementById("recordStatus").textContent = 
+          `Kayıt ediliyor: ${fmt(recordStartTime)} - ${fmt(currentTime)} (${fmtShort(duration)})`;
+      }
     }
   </script>
 </body>

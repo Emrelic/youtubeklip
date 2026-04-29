@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(npm start)",
+      "Bash(npx cap build android)",
+      "Bash(npx cap add android)",
+      "Bash(npx cap open android)",
+      "Bash(adb devices)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(ls \"$USERPROFILE/AppData/Local/Android\")",
+      "Bash(export ANDROID_HOME=\"$USERPROFILE/AppData/Local/Android/Sdk\")",
+      "Bash(export PATH=\"$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/tools\")",
+      "Bash(adb version)",
+      "Bash(export PATH=\"$PATH:$ANDROID_HOME/platform-tools\")",
+      "Bash(set ANDROID_HOME=%USERPROFILE%AppDataLocalAndroidSdk)",
+      "Bash(ls \"$USERPROFILE/AppData/Local/Android/Sdk\")",
+      "Bash(echo \"$USERPROFILE\")",
+      "Bash(dir \"C:\\Users\\emrem\\AppData\\Local\\Android\\Sdk\")",
+      "Bash(adb install android/app/build/outputs/apk/debug/app-debug.apk)",
+      "Bash(adb uninstall com.ytklip.app)",
+      "Bash(adb shell am start -n com.ytklip.app/com.ytklip.app.MainActivity)",
+      "Bash(npx cap sync android)",
+      "Bash(adb install -r android/app/build/outputs/apk/debug/app-debug.apk)",
+      "Bash(adb shell screencap -p /sdcard/screenshot.png)",
+      "Bash(adb pull /sdcard/screenshot.png ./screenshot.png)",
+      "Bash(adb shell pm list packages)",
+      "Bash(\"$USERPROFILE/AppData/Local/Android/Sdk/platform-tools/adb.exe\" shell pm list packages)",
+      "Bash(\"$USERPROFILE/AppData/Local/Android/Sdk/platform-tools/adb.exe\" shell am start -n com.ytklip.app/com.ytklip.app.MainActivity)",
+      "Bash(\"$USERPROFILE/AppData/Local/Android/Sdk/platform-tools/adb.exe\" logcat -d)",
+      "Bash(./adb.exe logcat -d)",
+      "Bash(./adb.exe shell am force-stop com.ytklip.app)",
+      "Bash(./adb.exe logcat -c)",
+      "Bash(./adb.exe shell am start -n com.ytklip.app/com.ytklip.app.MainActivity)",
+      "Bash(./adb.exe logcat)",
+      "Bash(ls \"$USERPROFILE/AppData/Local/Android/Sdk/platform-tools/screenshot3.png\")",
+      "Read(/C:\\Users\\emrem\\AppData\\Local\\Android\\Sdk\\platform-tools/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
